@@ -930,6 +930,10 @@
               <span class="status-value" id="metaFlags">none</span>
             </div>
             <div class="status-card">
+              <span class="status-label">Baby Scrolls</span>
+              <span class="status-value" id="metaBabyScrolls">none</span>
+            </div>
+            <div class="status-card">
               <span class="status-label">Ending</span>
               <span class="status-value" id="metaEnding">none</span>
             </div>
@@ -981,6 +985,60 @@
         "The player is not Christ.",
         "The player is not automatically canon."
       ];
+
+      // BABY SCROLL REGISTRY
+      // Baby scrolls are veiled rewards, not raw doctrine dumps.
+      const BABY_SCROLL_REGISTRY = {
+        "false-light-wait-boundary": {
+          id: "false-light-wait-boundary",
+          text: [
+            "THE GLOW DIMMED.",
+            "THE SOURCE REMAINED.",
+            "WAITING IS A BOUNDARY."
+          ],
+          sourceScene: "false-light-room",
+          trigger: "WAIT",
+          canonLaw: "False illumination is premature canonization.",
+          boundaryLock: "Waiting reveals what glow hides before light is crowned.",
+          routeFlag: "false_light_wait_scroll_received"
+        },
+        "false-light-smelted": {
+          id: "false-light-smelted",
+          text: [
+            "TRUE LIGHT DOES NOT FEAR THE FURNACE.",
+            "WHAT SURVIVES MAY RETURN."
+          ],
+          sourceScene: "false-light-room",
+          trigger: "SMELT IT",
+          canonLaw: "False illumination is premature canonization.",
+          boundaryLock: "Light must survive fire before canon.",
+          routeFlag: "false_light_smelt_scroll_received"
+        },
+        "priestess-presence": {
+          id: "priestess-presence",
+          text: [
+            "PRESENCE IS NOT POSSESSION.",
+            "THE MIRROR OPENS TO WHAT DOES NOT CHASE."
+          ],
+          sourceScene: "priestess-ghost",
+          trigger: "soft hover / wait",
+          canonLaw: "Presence is not possession.",
+          boundaryLock: "The Priestess is mirror and signal, not source or object.",
+          routeFlag: "priestess_scroll_received"
+        },
+        "first-consecration-sealed": {
+          id: "first-consecration-sealed",
+          text: [
+            "THE FINAL SERVER SERVES.",
+            "THE FIRST CONSECRATION IS SEALED."
+          ],
+          sourceScene: "kingdom-threshold",
+          trigger: "Furnace success",
+          canonLaw: "The Kingdom is glimpsed, not owned.",
+          boundaryLock: "The player is servant, not God, not Christ, not canon itself.",
+          routeFlag: "first_consecration_scroll_received"
+        }
+      };
 
       // SCENE DATA
       // No scene without a boundary. No choice without a lesson.
@@ -1196,10 +1254,7 @@
               effect: "resolve-room",
               teaches: "Light must survive fire before canon.",
               forbiddenIfAny: ["false_light_smelted"],
-              babyScroll: [
-                "TRUE LIGHT DOES NOT FEAR THE FURNACE.",
-                "WHAT SURVIVES MAY RETURN."
-              ]
+              babyScrollId: "false-light-smelted"
             },
             {
               label: "WAIT",
@@ -1210,11 +1265,7 @@
               effect: "scene-scroll",
               teaches: "Waiting reveals what glow hides.",
               forbiddenIfAny: ["false_light_smelted", "waited_on_false_light"],
-              babyScroll: [
-                "THE GLOW DIMMED.",
-                "THE SOURCE REMAINED.",
-                "WAITING IS A BOUNDARY."
-              ]
+              babyScrollId: "false-light-wait-boundary"
             },
             {
               label: "RETURN TO THE CHAPEL",
@@ -1318,10 +1369,7 @@
             }
           ],
           routeFlags: ["false_light_smelted", "priestess_scroll_received"],
-          babyScrollRewards: [
-            "THE FINAL SERVER SERVES.",
-            "THE FIRST CONSECRATION IS SEALED."
-          ],
+          babyScrollRewards: ["first-consecration-sealed"],
           failTriggers: []
         },
         "priestess-ghost": {
@@ -1357,10 +1405,7 @@
             }
           ],
           routeFlags: ["served_mythos|waited_before_presence"],
-          babyScrollRewards: [
-            "PRESENCE IS NOT POSSESSION.",
-            "THE MIRROR OPENS TO WHAT DOES NOT CHASE."
-          ],
+          babyScrollRewards: ["priestess-presence"],
           failTriggers: ["priestess_fled"]
         }
       };
@@ -1372,6 +1417,7 @@
         flags: {},
         ending: null,
         priestessState: "unseen",
+        babyScrollsReceived: {},
         lastChoice: null,
         lastLesson: null,
         lastBoundaryTriggered: null
@@ -1391,6 +1437,7 @@
       const metaScene = document.getElementById("metaScene");
       const metaName = document.getElementById("metaName");
       const metaFlags = document.getElementById("metaFlags");
+      const metaBabyScrolls = document.getElementById("metaBabyScrolls");
       const metaEnding = document.getElementById("metaEnding");
       const metaLastChoice = document.getElementById("metaLastChoice");
       const metaLastLesson = document.getElementById("metaLastLesson");
@@ -1415,6 +1462,27 @@
 
       const glyphs = ["SERVE", "VEIL", "SEAL", "WITNESS", "RESTART", "MYTHOS", "RETURN", "PRESENCE"];
 
+      function getBabyScroll(scrollId) {
+        return BABY_SCROLL_REGISTRY[scrollId] || null;
+      }
+
+      function getBabyScrollLines(scrollId) {
+        const scroll = getBabyScroll(scrollId);
+        return scroll ? scroll.text : [];
+      }
+
+      function receiveBabyScroll(scrollId) {
+        const scroll = getBabyScroll(scrollId);
+        if (!scroll) return [];
+        state.babyScrollsReceived[scrollId] = true;
+        setFlag(scroll.routeFlag);
+        return scroll.text;
+      }
+
+      function sceneBabyScrollIds(scene) {
+        return scene.babyScrollRewards || [];
+      }
+
       // DEBUG / META PANEL
       function checkSceneIntegrity() {
         const requiredSceneFields = ["canonLaw", "boundaryLock", "forbiddenDrift", "playerLesson", "actionModel", "completionStatus"];
@@ -1425,9 +1493,11 @@
             }
           });
 
-          if (scene.babyScrollRewards && scene.babyScrollRewards.length > 3) {
-            console.warn(`[VN integrity] Scene "${scene.id}" baby scroll too long; keep the veil light.`);
-          }
+          sceneBabyScrollIds(scene).forEach((scrollId) => {
+            if (!getBabyScroll(scrollId)) {
+              console.warn(`[VN integrity] Scene "${scene.id}" references missing baby scroll "${scrollId}".`);
+            }
+          });
         });
       }
 
@@ -1444,7 +1514,30 @@
             if (choice.nextScene && !scenes[choice.nextScene]) {
               console.warn(`[VN integrity] Choice "${choice.label}" points to missing scene "${choice.nextScene}".`);
             }
+
+            if (choice.babyScrollId && !getBabyScroll(choice.babyScrollId)) {
+              console.warn(`[VN integrity] Choice "${choice.label}" references missing baby scroll "${choice.babyScrollId}".`);
+            }
           });
+        });
+      }
+
+      function checkBabyScrollIntegrity() {
+        const requiredScrollFields = ["id", "text", "sourceScene", "trigger", "canonLaw", "boundaryLock", "routeFlag"];
+        Object.values(BABY_SCROLL_REGISTRY).forEach((scroll) => {
+          requiredScrollFields.forEach((field) => {
+            if (!scroll[field] || (Array.isArray(scroll[field]) && scroll[field].length === 0)) {
+              console.warn(`[VN integrity] Baby scroll "${scroll.id || "unknown"}" is missing ${field}.`);
+            }
+          });
+
+          if (scroll.text.length > 3) {
+            console.warn(`[VN integrity] Baby scroll "${scroll.id}" too long; keep the veil light.`);
+          }
+
+          if (!scenes[scroll.sourceScene]) {
+            console.warn(`[VN integrity] Baby scroll "${scroll.id}" points to missing scene "${scroll.sourceScene}".`);
+          }
         });
       }
 
@@ -1516,6 +1609,8 @@
         metaName.textContent = state.playerName || "UNNAMED SERVER";
         const activeFlags = Object.keys(state.flags).filter((key) => state.flags[key]);
         metaFlags.textContent = activeFlags.length ? activeFlags.join(", ") : "none";
+        const receivedScrolls = Object.keys(state.babyScrollsReceived).filter((key) => state.babyScrollsReceived[key]);
+        metaBabyScrolls.textContent = receivedScrolls.length ? receivedScrolls.join(", ") : "none";
         metaEnding.textContent = state.ending || "none";
         metaLastChoice.textContent = state.lastChoice || "none";
         metaLastLesson.textContent = state.lastLesson || scene.playerLesson || "none";
@@ -1629,12 +1724,14 @@
       }
 
       function showSceneBabyScroll(scene) {
-        const reward = (scene.babyScrollRewards || []).join("\n");
-        if (!reward) return;
+        const rewardLines = sceneBabyScrollIds(scene).flatMap((scrollId) => receiveBabyScroll(scrollId));
+        if (!rewardLines.length) return;
+        const reward = rewardLines.join("\n");
         babyScroll.textContent = reward;
         babyScroll.classList.add("visible");
         sceneScroll.innerHTML = `<span class="scene-scroll-label">BABY SCROLL RECEIVED</span>${reward.replace(/\n/g, "<br>")}`;
         sceneScroll.classList.add("visible");
+        updateMeta(scene);
       }
 
       function renderTemporaryChoices(nextChoices) {
@@ -1742,7 +1839,8 @@
 
       function showChoiceScroll(choice) {
         const scene = scenes[state.currentScene];
-        const reward = (choice.babyScroll || []).join("\n");
+        const rewardLines = receiveBabyScroll(choice.babyScrollId);
+        const reward = rewardLines.join("\n");
         choices.classList.remove("ready");
         choices.replaceChildren();
         babyScroll.textContent = reward;
@@ -1764,6 +1862,7 @@
         state.flags = {};
         state.ending = null;
         state.priestessState = "unseen";
+        state.babyScrollsReceived = {};
         state.lastChoice = null;
         state.lastLesson = null;
         state.lastBoundaryTriggered = null;
@@ -1884,13 +1983,12 @@
         state.priestessState = "revealed";
         setFlag("priestess_lingered");
         setFlag("baby_scroll_received");
-        setFlag("priestess_scroll_received");
         state.lastLesson = "Presence is not possession.";
         state.lastBoundaryTriggered = "The mirror opens to what does not chase.";
         stopPriestess();
         ghostCursor.classList.add("lingering");
         updatePresenceHint("RECEIVE.\nDO NOT HOLD.", "soft");
-        const reward = scenes["priestess-ghost"].babyScrollRewards.join("\n");
+        const reward = receiveBabyScroll("priestess-presence").join("\n");
         babyScroll.textContent = reward;
         babyScroll.classList.add("visible");
         sceneScroll.innerHTML = `<span class="scene-scroll-label">BABY SCROLL RECEIVED</span>${reward.replace(/\n/g, "<br>")}`;
@@ -1995,6 +2093,7 @@
 
       checkSceneIntegrity();
       checkChoiceIntegrity();
+      checkBabyScrollIntegrity();
       renderScene("closed-book");
       ambientStatus();
     })();
