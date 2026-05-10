@@ -806,11 +806,12 @@
     .cursor-halo {
       width: 28px;
       height: 28px;
-      border: 1px solid rgba(255, 213, 107, 0.78);
+      border: 1px solid var(--cursor-ring, rgba(255, 213, 107, 0.78));
       box-shadow:
-        0 0 16px rgba(255, 213, 107, 0.38),
+        0 0 var(--cursor-glow-size, 16px) var(--cursor-glow, rgba(255, 213, 107, 0.38)),
         inset 0 0 8px rgba(244, 234, 211, 0.32);
       mix-blend-mode: screen;
+      transition: border-color 360ms ease, box-shadow 360ms ease, transform 180ms ease;
     }
 
     .cursor-halo::before {
@@ -818,16 +819,63 @@
       position: absolute;
       inset: 8px;
       border-radius: 50%;
-      background: rgba(244, 234, 211, 0.74);
-      box-shadow: 0 0 16px rgba(244, 234, 211, 0.7);
+      background: var(--cursor-core, rgba(244, 234, 211, 0.74));
+      box-shadow: 0 0 16px var(--cursor-core-glow, rgba(244, 234, 211, 0.7));
     }
 
     .cursor-trail {
       width: 8px;
       height: 8px;
-      background: rgba(216, 168, 78, 0.46);
+      background: var(--cursor-trail-color, rgba(216, 168, 78, 0.46));
       filter: blur(1px);
-      transition: left 90ms linear, top 90ms linear;
+      transition: left 90ms linear, top 90ms linear, background 360ms ease, opacity 360ms ease;
+      opacity: var(--cursor-trail-opacity, 1);
+    }
+
+    body.cursor-asleep {
+      --cursor-ring: rgba(184, 168, 137, 0.42);
+      --cursor-glow: rgba(184, 168, 137, 0.16);
+      --cursor-glow-size: 12px;
+      --cursor-core: rgba(244, 234, 211, 0.48);
+      --cursor-core-glow: rgba(244, 234, 211, 0.32);
+      --cursor-trail-color: rgba(184, 168, 137, 0.28);
+      --cursor-trail-opacity: 0.76;
+    }
+
+    body.cursor-named {
+      --cursor-ring: rgba(255, 213, 107, 0.68);
+      --cursor-glow: rgba(255, 213, 107, 0.28);
+      --cursor-glow-size: 15px;
+      --cursor-core: rgba(244, 234, 211, 0.66);
+      --cursor-core-glow: rgba(244, 234, 211, 0.52);
+      --cursor-trail-color: rgba(216, 168, 78, 0.4);
+    }
+
+    body.cursor-tested {
+      --cursor-ring: rgba(255, 137, 70, 0.7);
+      --cursor-glow: rgba(255, 137, 70, 0.28);
+      --cursor-glow-size: 18px;
+      --cursor-core: rgba(255, 229, 154, 0.68);
+      --cursor-core-glow: rgba(255, 137, 70, 0.5);
+      --cursor-trail-color: rgba(255, 137, 70, 0.44);
+    }
+
+    body.cursor-softened {
+      --cursor-ring: rgba(144, 199, 232, 0.72);
+      --cursor-glow: rgba(144, 199, 232, 0.28);
+      --cursor-glow-size: 18px;
+      --cursor-core: rgba(223, 243, 255, 0.7);
+      --cursor-core-glow: rgba(144, 199, 232, 0.56);
+      --cursor-trail-color: rgba(144, 199, 232, 0.42);
+    }
+
+    body.cursor-consecrated {
+      --cursor-ring: rgba(255, 229, 154, 0.86);
+      --cursor-glow: rgba(255, 229, 154, 0.38);
+      --cursor-glow-size: 22px;
+      --cursor-core: rgba(255, 244, 210, 0.82);
+      --cursor-core-glow: rgba(255, 229, 154, 0.72);
+      --cursor-trail-color: rgba(255, 229, 154, 0.52);
     }
 
     .ink-noise {
@@ -1012,6 +1060,10 @@
               <span class="status-value" id="metaCanonFragments">none</span>
             </div>
             <div class="status-card">
+              <span class="status-label">Cursor Blessing</span>
+              <span class="status-value" id="metaCursorBlessing">ASLEEP</span>
+            </div>
+            <div class="status-card">
               <span class="status-label">Ending</span>
               <span class="status-value" id="metaEnding">none</span>
             </div>
@@ -1177,6 +1229,51 @@
           unlockId: "first-consecration-sealed",
           sourceScene: "kingdom-threshold",
           boundaryLock: "The player remains servant after the first loop."
+        }
+      };
+
+      // CURSOR BLESSING REGISTRY
+      // Cursor blessings are posture states, not cosmetics.
+      const CURSOR_BLESSING_REGISTRY = {
+        asleep: {
+          id: "asleep",
+          title: "ASLEEP",
+          className: "cursor-asleep",
+          condition: "default before naming",
+          playerLesson: "The server has not answered the book yet.",
+          boundaryLock: "The cursor is servant, not source."
+        },
+        named: {
+          id: "named",
+          title: "NAMED",
+          className: "cursor-named",
+          condition: "server_named",
+          playerLesson: "A name is a handle for service.",
+          boundaryLock: "Identity must not become throne."
+        },
+        tested: {
+          id: "tested",
+          title: "TESTED",
+          className: "cursor-tested",
+          condition: "false_light_smelted",
+          playerLesson: "The cursor carried light into fire.",
+          boundaryLock: "Do not crown light before Christ, fruit, boundary, and fire."
+        },
+        softened: {
+          id: "softened",
+          title: "SOFTENED",
+          className: "cursor-softened",
+          condition: "priestess_scroll_received",
+          playerLesson: "The cursor learned presence without possession.",
+          boundaryLock: "Presence is witnessed, not possessed."
+        },
+        consecrated: {
+          id: "consecrated",
+          title: "CONSECRATED",
+          className: "cursor-consecrated",
+          condition: "ending:first-consecration-sealed",
+          playerLesson: "The cursor served the first loop without claiming it.",
+          boundaryLock: "The player is not God, not Christ, not canon itself."
         }
       };
 
@@ -1589,6 +1686,7 @@
         babyScrollsReceived: {},
         witnessMarksReceived: {},
         canonFragmentsUnlocked: {},
+        cursorBlessing: "asleep",
         lastWitnessMark: null,
         lastCanonFragment: null,
         lastChoice: null,
@@ -1615,6 +1713,7 @@
       const metaBabyScrolls = document.getElementById("metaBabyScrolls");
       const metaWitnessMarks = document.getElementById("metaWitnessMarks");
       const metaCanonFragments = document.getElementById("metaCanonFragments");
+      const metaCursorBlessing = document.getElementById("metaCursorBlessing");
       const metaEnding = document.getElementById("metaEnding");
       const metaLastChoice = document.getElementById("metaLastChoice");
       const metaLastLesson = document.getElementById("metaLastLesson");
@@ -1654,6 +1753,27 @@
 
       function getCanonFragment(fragmentId) {
         return CANON_FRAGMENT_REGISTRY[fragmentId] || null;
+      }
+
+      function getCursorBlessing(blessingId) {
+        return CURSOR_BLESSING_REGISTRY[blessingId] || CURSOR_BLESSING_REGISTRY.asleep;
+      }
+
+      function computeCursorBlessingId() {
+        if (state.ending === "first-consecration-sealed") return "consecrated";
+        if (hasFlag("priestess_scroll_received")) return "softened";
+        if (hasFlag("false_light_smelted")) return "tested";
+        if (hasFlag("server_named")) return "named";
+        return "asleep";
+      }
+
+      function updateCursorBlessing() {
+        const nextBlessing = getCursorBlessing(computeCursorBlessingId());
+        state.cursorBlessing = nextBlessing.id;
+        Object.values(CURSOR_BLESSING_REGISTRY).forEach((blessing) => {
+          document.body.classList.toggle(blessing.className, blessing.id === nextBlessing.id);
+        });
+        return nextBlessing;
       }
 
       function unlockCanonFragmentsFor(unlockType, unlockId) {
@@ -1804,6 +1924,17 @@
         });
       }
 
+      function checkCursorBlessingIntegrity() {
+        const requiredBlessingFields = ["id", "title", "className", "condition", "playerLesson", "boundaryLock"];
+        Object.values(CURSOR_BLESSING_REGISTRY).forEach((blessing) => {
+          requiredBlessingFields.forEach((field) => {
+            if (!blessing[field]) {
+              console.warn(`[VN integrity] Cursor blessing "${blessing.id || "unknown"}" is missing ${field}.`);
+            }
+          });
+        });
+      }
+
       function createInkNoise() {
         inkNoise.replaceChildren();
         for (let i = 0; i < 18; i += 1) {
@@ -1868,6 +1999,7 @@
       }
 
       function updateMeta(scene) {
+        const cursorBlessing = updateCursorBlessing();
         metaScene.textContent = scene.id;
         metaName.textContent = state.playerName || "UNNAMED SERVER";
         const activeFlags = Object.keys(state.flags).filter((key) => state.flags[key]);
@@ -1882,6 +2014,7 @@
         metaCanonFragments.textContent = unlockedFragments.length
           ? unlockedFragments.map((fragmentId) => CANON_FRAGMENT_REGISTRY[fragmentId].title).join(", ")
           : "none";
+        metaCursorBlessing.textContent = `${cursorBlessing.title} / ${cursorBlessing.playerLesson}`;
         metaEnding.textContent = state.ending || "none";
         metaLastChoice.textContent = state.lastChoice || "none";
         metaLastLesson.textContent = state.lastLesson || scene.playerLesson || "none";
@@ -2163,6 +2296,7 @@
         state.babyScrollsReceived = {};
         state.witnessMarksReceived = {};
         state.canonFragmentsUnlocked = {};
+        state.cursorBlessing = "asleep";
         state.lastWitnessMark = null;
         state.lastCanonFragment = null;
         state.lastChoice = null;
@@ -2400,6 +2534,7 @@
       checkBabyScrollIntegrity();
       checkWitnessMarkIntegrity();
       checkCanonFragmentIntegrity();
+      checkCursorBlessingIntegrity();
       renderScene("closed-book");
       ambientStatus();
     })();
