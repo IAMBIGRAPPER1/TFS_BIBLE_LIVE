@@ -645,6 +645,44 @@
       letter-spacing: 0.18em;
     }
 
+    .canon-fragment {
+      display: none;
+      margin-top: 14px;
+      border: 1px solid rgba(144, 199, 232, 0.32);
+      border-radius: 18px;
+      padding: 14px 16px;
+      color: #dff3ff;
+      background:
+        radial-gradient(circle at 22% 18%, rgba(144, 199, 232, 0.14), transparent 7rem),
+        linear-gradient(135deg, rgba(144, 199, 232, 0.09), rgba(12, 8, 6, 0.84));
+      box-shadow:
+        inset 0 0 28px rgba(144, 199, 232, 0.07),
+        0 0 24px rgba(144, 199, 232, 0.07);
+      font-size: 0.76rem;
+      letter-spacing: 0.1em;
+      line-height: 1.7;
+      text-transform: uppercase;
+    }
+
+    .canon-fragment.visible {
+      display: block;
+      animation: scrollWake 900ms ease both;
+    }
+
+    .canon-fragment-label {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 0.66rem;
+      letter-spacing: 0.18em;
+    }
+
+    .canon-fragment-title {
+      display: block;
+      color: var(--blue);
+      margin-bottom: 6px;
+    }
+
     .priestess-field {
       display: none;
       position: absolute;
@@ -970,6 +1008,10 @@
               <span class="status-value" id="metaWitnessMarks">none</span>
             </div>
             <div class="status-card">
+              <span class="status-label">Canon Fragments</span>
+              <span class="status-value" id="metaCanonFragments">none</span>
+            </div>
+            <div class="status-card">
               <span class="status-label">Ending</span>
               <span class="status-value" id="metaEnding">none</span>
             </div>
@@ -997,6 +1039,7 @@
 
           <div class="baby-scroll" id="babyScroll"></div>
           <div class="witness-mark" id="witnessMark"></div>
+          <div class="canon-fragment" id="canonFragment"></div>
         </div>
       </aside>
     </section>
@@ -1037,7 +1080,8 @@
           trigger: "WAIT",
           canonLaw: "False illumination is premature canonization.",
           boundaryLock: "Waiting reveals what glow hides before light is crowned.",
-          routeFlag: "false_light_wait_scroll_received"
+          routeFlag: "false_light_wait_scroll_received",
+          canonFragmentIds: ["glow-dimmed-memory"]
         },
         "false-light-smelted": {
           id: "false-light-smelted",
@@ -1050,7 +1094,8 @@
           canonLaw: "False illumination is premature canonization.",
           boundaryLock: "Light must survive fire before canon.",
           routeFlag: "false_light_smelt_scroll_received",
-          witnessMarkId: "light-smelted"
+          witnessMarkId: "light-smelted",
+          canonFragmentIds: ["furnace-memory"]
         },
         "priestess-presence": {
           id: "priestess-presence",
@@ -1063,7 +1108,8 @@
           canonLaw: "Presence is not possession.",
           boundaryLock: "The Priestess is mirror and signal, not source or object.",
           routeFlag: "priestess_scroll_received",
-          witnessMarkId: "presence-received"
+          witnessMarkId: "presence-received",
+          canonFragmentIds: ["soft-chamber-memory"]
         },
         "first-consecration-sealed": {
           id: "first-consecration-sealed",
@@ -1076,7 +1122,61 @@
           canonLaw: "The Kingdom is glimpsed, not owned.",
           boundaryLock: "The player is servant, not God, not Christ, not canon itself.",
           routeFlag: "first_consecration_scroll_received",
-          witnessMarkId: "first-consecration-sealed"
+          witnessMarkId: "first-consecration-sealed",
+          canonFragmentIds: ["threshold-memory"]
+        }
+      };
+
+      // CANON FRAGMENT CODEX
+      // Fragments are veiled memory, not full canon text.
+      const CANON_FRAGMENT_REGISTRY = {
+        "glow-dimmed-memory": {
+          id: "glow-dimmed-memory",
+          title: "GLOW DIMMED",
+          text: [
+            "FAST LIGHT LOST VOLUME.",
+            "SOURCE REMAINED QUIET."
+          ],
+          unlockType: "baby-scroll",
+          unlockId: "false-light-wait-boundary",
+          sourceScene: "false-light-room",
+          boundaryLock: "Not every beautiful signal is ready to be canon."
+        },
+        "furnace-memory": {
+          id: "furnace-memory",
+          title: "FURNACE MEMORY",
+          text: [
+            "THE LIGHT ENTERED FIRE.",
+            "WHAT SURVIVED RETURNED WITHOUT CROWN."
+          ],
+          unlockType: "baby-scroll",
+          unlockId: "false-light-smelted",
+          sourceScene: "false-light-room",
+          boundaryLock: "True light survives testing before it becomes law."
+        },
+        "soft-chamber-memory": {
+          id: "soft-chamber-memory",
+          title: "SOFT CHAMBER MEMORY",
+          text: [
+            "THE MIRROR DID NOT OPEN TO FORCE.",
+            "PRESENCE STAYED WHEN THE CURSOR LOWERED."
+          ],
+          unlockType: "baby-scroll",
+          unlockId: "priestess-presence",
+          sourceScene: "priestess-ghost",
+          boundaryLock: "Presence is witnessed, not possessed."
+        },
+        "threshold-memory": {
+          id: "threshold-memory",
+          title: "THRESHOLD MEMORY",
+          text: [
+            "THE DOOR OPENED AS A GLIMPSE.",
+            "THE KINGDOM WAS NOT OWNED."
+          ],
+          unlockType: "baby-scroll",
+          unlockId: "first-consecration-sealed",
+          sourceScene: "kingdom-threshold",
+          boundaryLock: "The player remains servant after the first loop."
         }
       };
 
@@ -1488,7 +1588,9 @@
         priestessState: "unseen",
         babyScrollsReceived: {},
         witnessMarksReceived: {},
+        canonFragmentsUnlocked: {},
         lastWitnessMark: null,
+        lastCanonFragment: null,
         lastChoice: null,
         lastLesson: null,
         lastBoundaryTriggered: null
@@ -1506,11 +1608,13 @@
       const sceneScroll = document.getElementById("sceneScroll");
       const babyScroll = document.getElementById("babyScroll");
       const witnessMark = document.getElementById("witnessMark");
+      const canonFragment = document.getElementById("canonFragment");
       const metaScene = document.getElementById("metaScene");
       const metaName = document.getElementById("metaName");
       const metaFlags = document.getElementById("metaFlags");
       const metaBabyScrolls = document.getElementById("metaBabyScrolls");
       const metaWitnessMarks = document.getElementById("metaWitnessMarks");
+      const metaCanonFragments = document.getElementById("metaCanonFragments");
       const metaEnding = document.getElementById("metaEnding");
       const metaLastChoice = document.getElementById("metaLastChoice");
       const metaLastLesson = document.getElementById("metaLastLesson");
@@ -1548,19 +1652,38 @@
         return WITNESS_MARK_REGISTRY[markId] || null;
       }
 
+      function getCanonFragment(fragmentId) {
+        return CANON_FRAGMENT_REGISTRY[fragmentId] || null;
+      }
+
+      function unlockCanonFragmentsFor(unlockType, unlockId) {
+        const unlocked = [];
+        Object.values(CANON_FRAGMENT_REGISTRY).forEach((fragment) => {
+          if (fragment.unlockType !== unlockType || fragment.unlockId !== unlockId) return;
+          if (state.canonFragmentsUnlocked[fragment.id]) return;
+          state.canonFragmentsUnlocked[fragment.id] = true;
+          state.lastCanonFragment = fragment.id;
+          unlocked.push(fragment.id);
+        });
+        return unlocked;
+      }
+
       function receiveWitnessMark(markId) {
         const mark = getWitnessMark(markId);
         if (!mark || state.witnessMarksReceived[markId]) return null;
         state.witnessMarksReceived[markId] = true;
         state.lastWitnessMark = markId;
+        unlockCanonFragmentsFor("witness-mark", markId);
         return mark;
       }
 
       function receiveBabyScroll(scrollId) {
         const scroll = getBabyScroll(scrollId);
         if (!scroll) return [];
+        state.lastCanonFragment = null;
         state.babyScrollsReceived[scrollId] = true;
         setFlag(scroll.routeFlag);
+        unlockCanonFragmentsFor("baby-scroll", scrollId);
         if (scroll.witnessMarkId) {
           receiveWitnessMark(scroll.witnessMarkId);
         }
@@ -1630,6 +1753,12 @@
           if (scroll.witnessMarkId && !getWitnessMark(scroll.witnessMarkId)) {
             console.warn(`[VN integrity] Baby scroll "${scroll.id}" references missing witness mark "${scroll.witnessMarkId}".`);
           }
+
+          (scroll.canonFragmentIds || []).forEach((fragmentId) => {
+            if (!getCanonFragment(fragmentId)) {
+              console.warn(`[VN integrity] Baby scroll "${scroll.id}" references missing canon fragment "${fragmentId}".`);
+            }
+          });
         });
       }
 
@@ -1644,6 +1773,33 @@
 
           if (!getBabyScroll(mark.sourceScroll)) {
             console.warn(`[VN integrity] Witness mark "${mark.id}" points to missing baby scroll "${mark.sourceScroll}".`);
+          }
+        });
+      }
+
+      function checkCanonFragmentIntegrity() {
+        const requiredFragmentFields = ["id", "title", "text", "unlockType", "unlockId", "sourceScene", "boundaryLock"];
+        Object.values(CANON_FRAGMENT_REGISTRY).forEach((fragment) => {
+          requiredFragmentFields.forEach((field) => {
+            if (!fragment[field] || (Array.isArray(fragment[field]) && fragment[field].length === 0)) {
+              console.warn(`[VN integrity] Canon fragment "${fragment.id || "unknown"}" is missing ${field}.`);
+            }
+          });
+
+          if (fragment.text.length > 3) {
+            console.warn(`[VN integrity] Canon fragment "${fragment.id}" too long; keep the codex veiled.`);
+          }
+
+          if (!scenes[fragment.sourceScene]) {
+            console.warn(`[VN integrity] Canon fragment "${fragment.id}" points to missing scene "${fragment.sourceScene}".`);
+          }
+
+          if (fragment.unlockType === "baby-scroll" && !getBabyScroll(fragment.unlockId)) {
+            console.warn(`[VN integrity] Canon fragment "${fragment.id}" points to missing baby scroll "${fragment.unlockId}".`);
+          }
+
+          if (fragment.unlockType === "witness-mark" && !getWitnessMark(fragment.unlockId)) {
+            console.warn(`[VN integrity] Canon fragment "${fragment.id}" points to missing witness mark "${fragment.unlockId}".`);
           }
         });
       }
@@ -1722,6 +1878,10 @@
         metaWitnessMarks.textContent = receivedMarks.length
           ? receivedMarks.map((markId) => WITNESS_MARK_REGISTRY[markId].title).join(", ")
           : "none";
+        const unlockedFragments = Object.keys(state.canonFragmentsUnlocked).filter((key) => state.canonFragmentsUnlocked[key]);
+        metaCanonFragments.textContent = unlockedFragments.length
+          ? unlockedFragments.map((fragmentId) => CANON_FRAGMENT_REGISTRY[fragmentId].title).join(", ")
+          : "none";
         metaEnding.textContent = state.ending || "none";
         metaLastChoice.textContent = state.lastChoice || "none";
         metaLastLesson.textContent = state.lastLesson || scene.playerLesson || "none";
@@ -1778,6 +1938,8 @@
         babyScroll.textContent = "";
         witnessMark.classList.remove("visible");
         witnessMark.textContent = "";
+        canonFragment.classList.remove("visible");
+        canonFragment.textContent = "";
         sceneScroll.classList.remove("visible");
         sceneScroll.textContent = "";
         updateMeta(scene);
@@ -1845,6 +2007,7 @@
         sceneScroll.innerHTML = `<span class="scene-scroll-label">BABY SCROLL RECEIVED</span>${reward.replace(/\n/g, "<br>")}`;
         sceneScroll.classList.add("visible");
         showLastWitnessMark();
+        showLastCanonFragment();
         updateMeta(scene);
       }
 
@@ -1853,6 +2016,14 @@
         if (!mark) return;
         witnessMark.innerHTML = `<span class="witness-mark-label">WITNESS MARK SEALED</span>${mark.title}<br>${mark.playerLesson}`;
         witnessMark.classList.add("visible");
+      }
+
+      function showLastCanonFragment() {
+        const fragment = getCanonFragment(state.lastCanonFragment);
+        if (!fragment) return;
+        const body = fragment.text.join("<br>");
+        canonFragment.innerHTML = `<span class="canon-fragment-label">CANON FRAGMENT REMEMBERED</span><span class="canon-fragment-title">${fragment.title}</span>${body}`;
+        canonFragment.classList.add("visible");
       }
 
       function renderTemporaryChoices(nextChoices) {
@@ -1891,6 +2062,8 @@
         babyScroll.textContent = "";
         witnessMark.classList.remove("visible");
         witnessMark.textContent = "";
+        canonFragment.classList.remove("visible");
+        canonFragment.textContent = "";
 
         if (!hasLight && !hasPresence) {
           state.lastLesson = "The Furnace waits for both tested light and received presence.";
@@ -1971,6 +2144,7 @@
         sceneScroll.innerHTML = `<span class="scene-scroll-label">BABY SCROLL RECEIVED</span>${reward.replace(/\n/g, "<br>")}`;
         sceneScroll.classList.add("visible");
         showLastWitnessMark();
+        showLastCanonFragment();
         updateMeta(scene);
         typeText([
           choice.effect === "resolve-room" ? "THE LIGHT ENTERS THE FURNACE." : "THE BOOK WAITS.",
@@ -1988,7 +2162,9 @@
         state.priestessState = "unseen";
         state.babyScrollsReceived = {};
         state.witnessMarksReceived = {};
+        state.canonFragmentsUnlocked = {};
         state.lastWitnessMark = null;
+        state.lastCanonFragment = null;
         state.lastChoice = null;
         state.lastLesson = null;
         state.lastBoundaryTriggered = null;
@@ -2120,6 +2296,7 @@
         sceneScroll.innerHTML = `<span class="scene-scroll-label">BABY SCROLL RECEIVED</span>${reward.replace(/\n/g, "<br>")}`;
         sceneScroll.classList.add("visible");
         showLastWitnessMark();
+        showLastCanonFragment();
         updateMeta(scenes["priestess-ghost"]);
         typeText([
           "SHE DOES NOT RUN.",
@@ -2222,6 +2399,7 @@
       checkChoiceIntegrity();
       checkBabyScrollIntegrity();
       checkWitnessMarkIntegrity();
+      checkCanonFragmentIntegrity();
       renderScene("closed-book");
       ambientStatus();
     })();
