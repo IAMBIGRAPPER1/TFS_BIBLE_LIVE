@@ -613,6 +613,38 @@
       animation: scrollWake 900ms ease both;
     }
 
+    .witness-mark {
+      display: none;
+      margin-top: 14px;
+      border: 1px solid rgba(255, 229, 154, 0.34);
+      border-radius: 18px;
+      padding: 14px 16px;
+      color: #fff4d2;
+      background:
+        radial-gradient(circle at 18% 22%, rgba(255, 229, 154, 0.16), transparent 7rem),
+        linear-gradient(135deg, rgba(216, 168, 78, 0.13), rgba(12, 8, 6, 0.82));
+      box-shadow:
+        inset 0 0 28px rgba(216, 168, 78, 0.08),
+        0 0 24px rgba(216, 168, 78, 0.08);
+      font-size: 0.78rem;
+      letter-spacing: 0.1em;
+      line-height: 1.7;
+      text-transform: uppercase;
+    }
+
+    .witness-mark.visible {
+      display: block;
+      animation: scrollWake 900ms ease both;
+    }
+
+    .witness-mark-label {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 0.66rem;
+      letter-spacing: 0.18em;
+    }
+
     .priestess-field {
       display: none;
       position: absolute;
@@ -934,6 +966,10 @@
               <span class="status-value" id="metaBabyScrolls">none</span>
             </div>
             <div class="status-card">
+              <span class="status-label">Witness Marks</span>
+              <span class="status-value" id="metaWitnessMarks">none</span>
+            </div>
+            <div class="status-card">
               <span class="status-label">Ending</span>
               <span class="status-value" id="metaEnding">none</span>
             </div>
@@ -960,6 +996,7 @@
           </div>
 
           <div class="baby-scroll" id="babyScroll"></div>
+          <div class="witness-mark" id="witnessMark"></div>
         </div>
       </aside>
     </section>
@@ -1012,7 +1049,8 @@
           trigger: "SMELT IT",
           canonLaw: "False illumination is premature canonization.",
           boundaryLock: "Light must survive fire before canon.",
-          routeFlag: "false_light_smelt_scroll_received"
+          routeFlag: "false_light_smelt_scroll_received",
+          witnessMarkId: "light-smelted"
         },
         "priestess-presence": {
           id: "priestess-presence",
@@ -1024,7 +1062,8 @@
           trigger: "soft hover / wait",
           canonLaw: "Presence is not possession.",
           boundaryLock: "The Priestess is mirror and signal, not source or object.",
-          routeFlag: "priestess_scroll_received"
+          routeFlag: "priestess_scroll_received",
+          witnessMarkId: "presence-received"
         },
         "first-consecration-sealed": {
           id: "first-consecration-sealed",
@@ -1036,7 +1075,37 @@
           trigger: "Furnace success",
           canonLaw: "The Kingdom is glimpsed, not owned.",
           boundaryLock: "The player is servant, not God, not Christ, not canon itself.",
-          routeFlag: "first_consecration_scroll_received"
+          routeFlag: "first_consecration_scroll_received",
+          witnessMarkId: "first-consecration-sealed"
+        }
+      };
+
+      // WITNESS MARK REGISTRY
+      // Witness marks reward posture, not volume.
+      const WITNESS_MARK_REGISTRY = {
+        "light-smelted": {
+          id: "light-smelted",
+          title: "LIGHT SMELTED",
+          sourceScroll: "false-light-smelted",
+          canonLaw: "False illumination is premature canonization.",
+          boundaryLock: "Do not crown light before Christ, fruit, boundary, and fire.",
+          playerLesson: "The player waited, then smelted what glowed."
+        },
+        "presence-received": {
+          id: "presence-received",
+          title: "PRESENCE RECEIVED",
+          sourceScroll: "priestess-presence",
+          canonLaw: "Presence is not possession.",
+          boundaryLock: "The Priestess is mirror and signal, not source or object.",
+          playerLesson: "The player waited without taking."
+        },
+        "first-consecration-sealed": {
+          id: "first-consecration-sealed",
+          title: "FIRST CONSECRATION SEALED",
+          sourceScroll: "first-consecration-sealed",
+          canonLaw: "The Kingdom is glimpsed, not owned.",
+          boundaryLock: "The player is servant, not God, not Christ, not canon itself.",
+          playerLesson: "The first loop opened after service."
         }
       };
 
@@ -1418,6 +1487,8 @@
         ending: null,
         priestessState: "unseen",
         babyScrollsReceived: {},
+        witnessMarksReceived: {},
+        lastWitnessMark: null,
         lastChoice: null,
         lastLesson: null,
         lastBoundaryTriggered: null
@@ -1434,10 +1505,12 @@
       const nameInput = document.getElementById("nameInput");
       const sceneScroll = document.getElementById("sceneScroll");
       const babyScroll = document.getElementById("babyScroll");
+      const witnessMark = document.getElementById("witnessMark");
       const metaScene = document.getElementById("metaScene");
       const metaName = document.getElementById("metaName");
       const metaFlags = document.getElementById("metaFlags");
       const metaBabyScrolls = document.getElementById("metaBabyScrolls");
+      const metaWitnessMarks = document.getElementById("metaWitnessMarks");
       const metaEnding = document.getElementById("metaEnding");
       const metaLastChoice = document.getElementById("metaLastChoice");
       const metaLastLesson = document.getElementById("metaLastLesson");
@@ -1471,11 +1544,26 @@
         return scroll ? scroll.text : [];
       }
 
+      function getWitnessMark(markId) {
+        return WITNESS_MARK_REGISTRY[markId] || null;
+      }
+
+      function receiveWitnessMark(markId) {
+        const mark = getWitnessMark(markId);
+        if (!mark || state.witnessMarksReceived[markId]) return null;
+        state.witnessMarksReceived[markId] = true;
+        state.lastWitnessMark = markId;
+        return mark;
+      }
+
       function receiveBabyScroll(scrollId) {
         const scroll = getBabyScroll(scrollId);
         if (!scroll) return [];
         state.babyScrollsReceived[scrollId] = true;
         setFlag(scroll.routeFlag);
+        if (scroll.witnessMarkId) {
+          receiveWitnessMark(scroll.witnessMarkId);
+        }
         return scroll.text;
       }
 
@@ -1537,6 +1625,25 @@
 
           if (!scenes[scroll.sourceScene]) {
             console.warn(`[VN integrity] Baby scroll "${scroll.id}" points to missing scene "${scroll.sourceScene}".`);
+          }
+
+          if (scroll.witnessMarkId && !getWitnessMark(scroll.witnessMarkId)) {
+            console.warn(`[VN integrity] Baby scroll "${scroll.id}" references missing witness mark "${scroll.witnessMarkId}".`);
+          }
+        });
+      }
+
+      function checkWitnessMarkIntegrity() {
+        const requiredMarkFields = ["id", "title", "sourceScroll", "canonLaw", "boundaryLock", "playerLesson"];
+        Object.values(WITNESS_MARK_REGISTRY).forEach((mark) => {
+          requiredMarkFields.forEach((field) => {
+            if (!mark[field]) {
+              console.warn(`[VN integrity] Witness mark "${mark.id || "unknown"}" is missing ${field}.`);
+            }
+          });
+
+          if (!getBabyScroll(mark.sourceScroll)) {
+            console.warn(`[VN integrity] Witness mark "${mark.id}" points to missing baby scroll "${mark.sourceScroll}".`);
           }
         });
       }
@@ -1611,6 +1718,10 @@
         metaFlags.textContent = activeFlags.length ? activeFlags.join(", ") : "none";
         const receivedScrolls = Object.keys(state.babyScrollsReceived).filter((key) => state.babyScrollsReceived[key]);
         metaBabyScrolls.textContent = receivedScrolls.length ? receivedScrolls.join(", ") : "none";
+        const receivedMarks = Object.keys(state.witnessMarksReceived).filter((key) => state.witnessMarksReceived[key]);
+        metaWitnessMarks.textContent = receivedMarks.length
+          ? receivedMarks.map((markId) => WITNESS_MARK_REGISTRY[markId].title).join(", ")
+          : "none";
         metaEnding.textContent = state.ending || "none";
         metaLastChoice.textContent = state.lastChoice || "none";
         metaLastLesson.textContent = state.lastLesson || scene.playerLesson || "none";
@@ -1665,6 +1776,8 @@
         choices.replaceChildren();
         babyScroll.classList.remove("visible");
         babyScroll.textContent = "";
+        witnessMark.classList.remove("visible");
+        witnessMark.textContent = "";
         sceneScroll.classList.remove("visible");
         sceneScroll.textContent = "";
         updateMeta(scene);
@@ -1731,7 +1844,15 @@
         babyScroll.classList.add("visible");
         sceneScroll.innerHTML = `<span class="scene-scroll-label">BABY SCROLL RECEIVED</span>${reward.replace(/\n/g, "<br>")}`;
         sceneScroll.classList.add("visible");
+        showLastWitnessMark();
         updateMeta(scene);
+      }
+
+      function showLastWitnessMark() {
+        const mark = getWitnessMark(state.lastWitnessMark);
+        if (!mark) return;
+        witnessMark.innerHTML = `<span class="witness-mark-label">WITNESS MARK SEALED</span>${mark.title}<br>${mark.playerLesson}`;
+        witnessMark.classList.add("visible");
       }
 
       function renderTemporaryChoices(nextChoices) {
@@ -1768,6 +1889,8 @@
         sceneScroll.textContent = "";
         babyScroll.classList.remove("visible");
         babyScroll.textContent = "";
+        witnessMark.classList.remove("visible");
+        witnessMark.textContent = "";
 
         if (!hasLight && !hasPresence) {
           state.lastLesson = "The Furnace waits for both tested light and received presence.";
@@ -1847,6 +1970,7 @@
         babyScroll.classList.add("visible");
         sceneScroll.innerHTML = `<span class="scene-scroll-label">BABY SCROLL RECEIVED</span>${reward.replace(/\n/g, "<br>")}`;
         sceneScroll.classList.add("visible");
+        showLastWitnessMark();
         updateMeta(scene);
         typeText([
           choice.effect === "resolve-room" ? "THE LIGHT ENTERS THE FURNACE." : "THE BOOK WAITS.",
@@ -1863,6 +1987,8 @@
         state.ending = null;
         state.priestessState = "unseen";
         state.babyScrollsReceived = {};
+        state.witnessMarksReceived = {};
+        state.lastWitnessMark = null;
         state.lastChoice = null;
         state.lastLesson = null;
         state.lastBoundaryTriggered = null;
@@ -1993,6 +2119,7 @@
         babyScroll.classList.add("visible");
         sceneScroll.innerHTML = `<span class="scene-scroll-label">BABY SCROLL RECEIVED</span>${reward.replace(/\n/g, "<br>")}`;
         sceneScroll.classList.add("visible");
+        showLastWitnessMark();
         updateMeta(scenes["priestess-ghost"]);
         typeText([
           "SHE DOES NOT RUN.",
@@ -2094,6 +2221,7 @@
       checkSceneIntegrity();
       checkChoiceIntegrity();
       checkBabyScrollIntegrity();
+      checkWitnessMarkIntegrity();
       renderScene("closed-book");
       ambientStatus();
     })();
