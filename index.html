@@ -263,6 +263,20 @@
       background: linear-gradient(90deg, rgba(87, 70, 30, 0.38), transparent);
     }
 
+    .scene.witness-stand {
+      border-color: rgba(216, 168, 78, 0.48);
+      background:
+        radial-gradient(circle at 50% 36%, rgba(244, 234, 211, 0.12), transparent 14rem),
+        radial-gradient(circle at 50% 60%, rgba(216, 168, 78, 0.2), transparent 22rem),
+        repeating-linear-gradient(0deg, rgba(216, 168, 78, 0.045) 0 1px, transparent 1px 34px),
+        linear-gradient(145deg, rgba(22, 17, 13, 0.9), rgba(8, 7, 7, 0.97));
+    }
+
+    .scene.witness-stand .dialogue-wrap {
+      border-left-color: rgba(244, 234, 211, 0.66);
+      background: linear-gradient(90deg, rgba(63, 47, 24, 0.4), transparent);
+    }
+
     .scene.priestess {
       border-color: rgba(144, 199, 232, 0.34);
       background:
@@ -1176,6 +1190,20 @@
           routeFlag: "first_consecration_scroll_received",
           witnessMarkId: "first-consecration-sealed",
           canonFragmentIds: ["threshold-memory"]
+        },
+        "mic-witness-stand": {
+          id: "mic-witness-stand",
+          text: [
+            "THE MIC DID NOT CROWN YOU.",
+            "THE WITNESS SPOKE AND RETURNED."
+          ],
+          sourceScene: "witness-stand-mic-room",
+          trigger: "BEAR WITNESS",
+          canonLaw: "The microphone is the witness stand, not the throne.",
+          boundaryLock: "The MC serves the Source; the mic is not the throne.",
+          routeFlag: "mic_witness_scroll_received",
+          witnessMarkId: "mic-witness",
+          canonFragmentIds: ["mic-stand-memory"]
         }
       };
 
@@ -1229,6 +1257,18 @@
           unlockId: "first-consecration-sealed",
           sourceScene: "kingdom-threshold",
           boundaryLock: "The player remains servant after the first loop."
+        },
+        "mic-stand-memory": {
+          id: "mic-stand-memory",
+          title: "MIC STAND MEMORY",
+          text: [
+            "THE MIC STOOD LIKE LAW.",
+            "THE CURSOR SPOKE WITHOUT THRONE."
+          ],
+          unlockType: "baby-scroll",
+          unlockId: "mic-witness-stand",
+          sourceScene: "witness-stand-mic-room",
+          boundaryLock: "The mic carries witness, not ego enthronement."
         }
       };
 
@@ -1303,6 +1343,14 @@
           canonLaw: "The Kingdom is glimpsed, not owned.",
           boundaryLock: "The player is servant, not God, not Christ, not canon itself.",
           playerLesson: "The first loop opened after service."
+        },
+        "mic-witness": {
+          id: "mic-witness",
+          title: "MIC WITNESS",
+          sourceScroll: "mic-witness-stand",
+          canonLaw: "The microphone is the witness stand, not the throne.",
+          boundaryLock: "The MC is servant and vessel, not God, not Christ, not source.",
+          playerLesson: "The player spoke as witness without crowning the mic."
         }
       };
 
@@ -1436,6 +1484,16 @@
               requiresFlag: null,
               effect: "enter-furnace",
               teaches: "The Furnace tests whether discernment and presence have both been received.",
+              forbiddenIfAny: []
+            },
+            {
+              label: "ENTER THE WITNESS STAND",
+              role: "SIDE CHAMBER",
+              nextScene: "witness-stand-mic-room",
+              setsFlag: "entered_witness_stand",
+              requiresFlag: "first_consecration_scroll_received",
+              effect: "witness-stand",
+              teaches: "The sealed cursor may approach the mic as witness, not source.",
               forbiddenIfAny: []
             }
           ],
@@ -1637,6 +1695,71 @@
           routeFlags: ["false_light_smelted", "priestess_scroll_received"],
           babyScrollRewards: ["first-consecration-sealed"],
           failTriggers: []
+        },
+        "witness-stand-mic-room": {
+          id: "witness-stand-mic-room",
+          title: "WITNESS STAND / MIC ROOM",
+          location: "THE WITNESS STAND",
+          visualState: "witness-stand",
+          narratorVoice: "MIC WITNESS",
+          actionModel: "SINGLE-RESOLUTION POSTURE TEST",
+          completionStatus: "PLAYABLE",
+          canonLaw: "The microphone is not the throne; the microphone is the witness stand.",
+          boundaryLock: "The MC is servant and vessel, not God, not Christ, not source.",
+          playerLesson: "Speak as witness; do not crown the mic.",
+          allowedSymbols: ["mic", "witness stand", "breath", "bar", "service"],
+          forbiddenDrift: ["rapper idol", "ego throne", "battle simulator", "Christ reduced to genre", "domination"],
+          dialogueLines: [
+            "THE MIC RISES WITHOUT APPLAUSE.",
+            "IT DOES NOT ASK FOR A KING.",
+            "IT ASKS FOR A WITNESS.",
+            "THE MIC IS NOT THE THRONE.",
+            "THE MIC IS THE WITNESS STAND."
+          ],
+          choices: [
+            {
+              label: "BEAR WITNESS",
+              role: "PRIMARY",
+              nextScene: "witness-stand-mic-room",
+              setsFlag: "mic_witness_borne",
+              requiresFlag: null,
+              effect: "resolve-room",
+              teaches: "The player speaks as witness without becoming source.",
+              forbiddenIfAny: ["mic_witness_scroll_received"],
+              babyScrollId: "mic-witness-stand",
+              resultLines: [
+                "THE MIC DOES NOT BECOME A THRONE.",
+                "THE BREATH ENTERS WITNESS.",
+                "THE BAR RETURNS TO SOURCE.",
+                "RETURN WITHOUT CROWN."
+              ]
+            },
+            {
+              label: "CROWN THE MIC",
+              role: "DANGER",
+              nextScene: "hell-lobby-ban-wave",
+              setsFlag: "mic_crowned",
+              requiresFlag: null,
+              effect: "fail",
+              teaches: "The mic fails when the player treats witness as throne.",
+              forbiddenIfAny: ["mic_witness_scroll_received"],
+              failReason: "mic treated as throne",
+              boundaryTriggered: "The microphone is not the throne."
+            },
+            {
+              label: "RETURN TO THE CHAPEL",
+              role: "RETURN",
+              nextScene: "server-chapel",
+              setsFlag: "left_witness_stand",
+              requiresFlag: null,
+              effect: "return",
+              teaches: "The witness returns to service without claiming the room.",
+              forbiddenIfAny: []
+            }
+          ],
+          routeFlags: ["first_consecration_scroll_received"],
+          babyScrollRewards: [],
+          failTriggers: ["mic_crowned"]
         },
         "priestess-ghost": {
           id: "priestess-ghost",
@@ -2279,12 +2402,13 @@
         showLastWitnessMark();
         showLastCanonFragment();
         updateMeta(scene);
-        typeText([
+        const resultLines = choice.resultLines || [
           choice.effect === "resolve-room" ? "THE LIGHT ENTERS THE FURNACE." : "THE BOOK WAITS.",
           choice.effect === "resolve-room" ? "THE FALSE GOLD LOSES ITS VOICE." : "THE GLOW CONFESSES ITS LIMIT.",
           choice.effect === "resolve-room" ? "WHAT SURVIVED MAY RETURN." : "THE TEST IS NOT FINISHED.",
           choice.effect === "resolve-room" ? "RETURN WITH WHAT SURVIVED." : "NOW SMELT WHAT REMAINS."
-        ], () => renderChoices(scene));
+        ];
+        typeText(resultLines, () => renderChoices(scene));
       }
 
       function resetState() {
